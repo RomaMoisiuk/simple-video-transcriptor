@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transcribe — AI Video Transcription</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Tokens ─────────────────────────────────────────────────────── */
+    :root {
+      --bg:             #0d1117;
+      --surface:        #161b27;
+      --surface-2:      #1c2235;
+      --border:         #222d42;
+      --border-subtle:  rgba(255,255,255,0.04);
+      --text:           #dde4f0;
+      --text-muted:     #6b7b96;
+      --text-dim:       #384257;
+      --accent:         #6366f1;
+      --accent-light:   #818cf8;
+      --accent-glow:    rgba(99,102,241,0.22);
+      --accent-bg:      rgba(99,102,241,0.08);
+      --success:        #10b981;
+      --success-bg:     rgba(16,185,129,0.1);
+      --success-border: rgba(16,185,129,0.28);
+      --error:          #f87171;
+      --error-bg:       rgba(248,113,113,0.1);
+      --error-border:   rgba(248,113,113,0.28);
+      --input-bg:       #0b0e18;
+      --log-bg:         #07090f;
+      --radius-lg:      14px;
+      --radius:         10px;
+      --radius-sm:      7px;
+      --shadow:         0 4px 28px rgba(0,0,0,0.45);
+      --shadow-lg:      0 8px 48px rgba(0,0,0,0.55);
+      --transition:     0.18s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 1rem 5rem;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+    .container {
+      max-width: 660px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    .header {
+      text-align: center;
+      padding: 3rem 0 2.25rem;
+    }
+
+    .header-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.625rem;
+    }
+
+    .header-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 24px var(--accent-glow);
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+
+    .tagline {
+      font-size: 0.9375rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* ── Card ───────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.125rem;
+    }
+
+    .card-title {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── Form helpers ───────────────────────────────────────────────── */
+    .form-group { margin-bottom: 1rem; }
+
+    .field-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 0.4rem;
+    }
+
+    .input-wrap { position: relative; }
+
+    .input-icon {
+      position: absolute;
+      left: 0.8rem;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    select {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9375rem;
+      padding: 0.7rem 0.875rem;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .has-icon input,
+    .has-icon select {
+      padding-left: 2.5rem;
+    }
+
+    input[type="text"]:focus,
+    input[type="url"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    input::placeholder { color: var(--text-dim); }
+
+    /* ── Two-col grid ───────────────────────────────────────────────── */
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.875rem;
+    }
+
+    /* ── Select wrapper with custom arrow ───────────────────────────── */
+    .select-wrap { position: relative; }
+
+    .select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      border-left:  4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top:   5px solid var(--text-muted);
+    }
+
+    select { cursor: pointer; padding-right: 2.25rem; }
+
+    /* ── Model badge ────────────────────────────────────────────────── */
+    .model-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 0.375rem;
+      padding: 0.175rem 0.55rem;
+      border-radius: 100px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: all var(--transition);
+    }
+
+    .badge-fastest { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.28); }
+    .badge-fast    { background: rgba(45,212,191,0.12); color: #2dd4bf; border: 1px solid rgba(45,212,191,0.28); }
+    .badge-balanced{ background: rgba(129,140,248,0.12); color: #818cf8; border: 1px solid rgba(129,140,248,0.28); }
+    .badge-accurate{ background: rgba(192,132,252,0.12); color: #c084fc; border: 1px solid rgba(192,132,252,0.28); }
+    .badge-best    { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.28); }
+
+    /* ── Format toggles ─────────────────────────────────────────────── */
+    .toggle-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
+    .toggle-group input[type="radio"] { display: none; }
+
+    .toggle-group .toggle-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.6rem 0.5rem;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all var(--transition);
+      user-select: none;
+    }
+
+    .toggle-group .toggle-label:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--accent-bg);
+    }
+
+    .toggle-group input[type="radio"]:checked + .toggle-label {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+      color: var(--accent-light);
+    }
+
+    /* ── Primary button ─────────────────────────────────────────────── */
+    .btn-primary {
+      width: 100%;
+      padding: 0.8rem 1.5rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      letter-spacing: -0.01em;
+      margin-top: 0.375rem;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-light);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px var(--accent-glow);
+    }
+
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* ── Secondary button ───────────────────────────────────────────── */
+    .btn-secondary {
+      padding: 0.6rem 1.25rem;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent-light);
+    }
+
+    /* ── Utility ────────────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+
+    /* ── Progress card ──────────────────────────────────────────────── */
+    .prog-bar-track {
+      height: 3px;
+      background: var(--border);
+      border-radius: 100px;
+      overflow: hidden;
+      margin-bottom: 1.375rem;
+    }
+
+    .prog-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 50%, var(--accent) 100%);
+      background-size: 200% 100%;
+      border-radius: 100px;
+      animation: shimmer 1.6s linear infinite;
+      transition: background 0.4s, width 0.4s;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    .prog-bar.done  { animation: none; background: var(--success); width: 100%; }
+    .prog-bar.error { animation: none; background: var(--error);   width: 100%; }
+
+    /* ── Steps ──────────────────────────────────────────────────────── */
+    .steps { display: flex; flex-direction: column; gap: 0.625rem; margin-bottom: 1.25rem; }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      padding: 0.875rem 1rem;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.25s, background 0.25s;
+    }
+
+    .step.active {
+      border-color: rgba(99,102,241,0.55);
+      background: var(--accent-bg);
+    }
+
+    .step.done {
+      border-color: var(--success-border);
+      background: var(--success-bg);
+    }
+
+    .step-icon-wrap {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      flex-shrink: 0;
+      transition: background 0.25s, color 0.25s;
+    }
+
+    .step.active .step-icon-wrap { background: var(--accent); color: #fff; }
+    .step.done  .step-icon-wrap  { background: var(--success); color: #fff; }
+
+    .step-body { flex: 1; min-width: 0; }
+
+    .step-name {
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .step-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+
+    /* Spinning indicator */
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Log area ───────────────────────────────────────────────────── */
+    .log-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      cursor: pointer;
+      padding: 0.625rem 0 0;
+      border-top: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      user-select: none;
+      transition: color var(--transition);
+    }
+
+    .log-toggle:hover { color: var(--text); }
+
+    .log-chevron { transition: transform 0.2s; }
+    .log-toggle.open .log-chevron { transform: rotate(180deg); }
+
+    .log-box {
+      background: var(--log-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.875rem 1rem;
+      height: 210px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.72rem;
+      line-height: 1.75;
+      color: #586175;
+      margin-top: 0.625rem;
+      scroll-behavior: smooth;
+    }
+
+    .log-box .l-cmd  { color: #6366f1; }
+    .log-box .l-ok   { color: #34d399; }
+    .log-box .l-warn { color: #fbbf24; }
+    .log-box .l-err  { color: #f87171; }
+
+    /* ── Result card ────────────────────────────────────────────────── */
+    .result-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .result-icon-wrap {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .result-icon-wrap.success {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success);
+    }
+
+    .result-icon-wrap.error {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error);
+    }
+
+    .result-title {
+      font-size: 1.0625rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .result-sub {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* ── File list ──────────────────────────────────────────────────── */
+    .file-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.65rem 0.875rem;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: border-color var(--transition);
+    }
+
+    .file-item:hover { border-color: var(--accent); }
+
+    .file-item .file-icon { color: var(--success); flex-shrink: 0; }
+
+    .file-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.775rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .file-copy-hint {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .copy-toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .copy-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Scrollbar ──────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+    /* ── Responsive ─────────────────────────────────────────────────── */
+    @media (max-width: 520px) {
+      .row-2 { grid-template-columns: 1fr; }
+      .card   { padding: 1.25rem; }
+      body    { padding: 0 0.75rem 4rem; }
+      h1      { font-size: 1.5rem; }
+    }
+
+    /* ── Connection overlay ─────────────────────────────────────────── */
+    .conn-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+
+    .conn-overlay.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .conn-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      max-width: 320px;
+    }
+
+    .conn-spinner {
+      width: 2.25rem;
+      height: 2.25rem;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    .conn-title {
+      font-size: 1.0625rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .conn-sub {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .conn-sub code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8125rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.15rem 0.4rem;
+      color: var(--accent-light);
+    }
+
+    .conn-error-icon {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 50%;
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Error log preview (shown inside the result card on failure) ── */
+    .error-log-wrap {
+      margin: 0.75rem 0 1rem;
+      border: 1px solid var(--error-border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .error-log-header {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.75rem;
+      background: var(--error-bg);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--error);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .error-log-lines {
+      background: var(--log-bg);
+      padding: 0.625rem 0.875rem;
+      max-height: 180px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      line-height: 1.7;
+      color: #8892a4;
+    }
+
+    .error-log-lines .el-err  { color: var(--error); }
+    .error-log-lines .el-warn { color: var(--warn); }
+    .error-log-lines .el-cmd  { color: var(--accent-light); }
+
+    /* ── Custom language input ──────────────────────────────────────── */
+    .lang-custom-wrap {
+      margin-top: 0.5rem;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;
+    }
+
+    .lang-custom-wrap.visible {
+      max-height: 4rem;
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Connection overlay (shown until /health responds) ──────────── -->
+<div class="conn-overlay" id="conn-overlay">
+  <div class="conn-box" id="conn-box">
+    <div class="conn-spinner"></div>
+    <div class="conn-title">Connecting to server…</div>
+    <div class="conn-sub">Starting up, just a moment.</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-lockup">
+      <div class="header-icon">
+        <!-- Microphone icon -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="8"  y1="22" x2="16" y2="22"/>
+        </svg>
+      </div>
+      <h1>Transcribe</h1>
+    </div>
+    <p class="tagline">AI-powered transcription for YouTube videos via Whisper</p>
+  </header>
+
+  <!-- ── Input card ─────────────────────────────────────────────────── -->
+  <div class="card" id="input-card">
+
+    <!-- URL -->
+    <div class="form-group">
+      <label class="field-label" for="url-input">YouTube URL</label>
+      <div class="input-wrap has-icon">
+        <span class="input-icon">
+          <!-- YouTube icon -->
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0C.488 3.45.029 5.804 0 12c.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0C23.512 20.55 23.971 18.196 24 12c-.029-6.185-.484-8.549-4.385-8.816zM9 16V8l8 3.993L9 16z"/>
+          </svg>
+        </span>
+        <input type="url" id="url-input"
+               placeholder="https://youtube.com/watch?v=…"
+               autocomplete="off" spellcheck="false" />
+      </div>
+    </div>
+
+    <!-- Language + Model -->
+    <div class="row-2">
+      <div class="form-group">
+        <label class="field-label" for="lang-select">Language</label>
+        <div class="input-wrap select-wrap">
+          <select id="lang-select">
+            <option value="en">English</option>
+            <option value="sl">Slovenian</option>
+            <option value="ro">Romanian</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="pt">Portuguese</option>
+            <option disabled>──────────</option>
+            <option value="other">Other (type it…)</option>
+          </select>
+        </div>
+        <div class="lang-custom-wrap" id="lang-custom-wrap">
+          <input type="text" id="lang-custom"
+                 placeholder="e.g. Japanese, Arabic, Korean…"
+                 spellcheck="false" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="field-label" for="model-select">Whisper Model</label>
+        <div class="input-wrap select-wrap">
+          <select id="model-select">
+            <option value="tiny">tiny</option>
+            <option value="base" selected>base</option>
+            <option value="small">small</option>
+            <option value="medium">medium</option>
+            <option value="large-v3">large-v3</option>
+          </select>
+        </div>
+        <span id="model-badge" class="model-badge">…</span>
+      </div>
+    </div>
+
+    <!-- Output format toggles -->
+    <div class="form-group">
+      <label class="field-label">Output Format</label>
+      <div class="toggle-group">
+        <input type="radio" name="format" id="fmt-text" value="text" checked />
+        <label class="toggle-label" for="fmt-text">
+          <!-- FileText icon -->
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          Text
+        </label>
+
+        <input type="radio" name="format" id="fmt-subtitles" value="subtitles" />
+        <label class="toggle-label" for="fmt-subtitles">
+          <!-- Subtitles / CC icon -->
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2" ry="2"/>
+            <line x1="6"  y1="12" x2="10" y2="12"/>
+            <line x1="13" y1="12" x2="18" y2="12"/>
+            <line x1="6"  y1="16" x2="14" y2="16"/>
+          </svg>
+          Subtitles
+        </label>
+
+        <input type="radio" name="format" id="fmt-both" value="both" />
+        <label class="toggle-label" for="fmt-both">
+          <!-- Layers icon -->
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+            <polyline points="2 17 12 22 22 17"/>
+            <polyline points="2 12 12 17 22 12"/>
+          </svg>
+          Both
+        </label>
+      </div>
+    </div>
+
+    <!-- Output folder -->
+    <div class="form-group">
+      <label class="field-label" for="folder-input">Output Folder</label>
+      <div class="input-wrap has-icon">
+        <span class="input-icon">
+          <!-- Folder icon -->
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </span>
+        <input type="text" id="folder-input" value="~/transcripts" spellcheck="false" />
+      </div>
+    </div>
+
+    <!-- Start button -->
+    <button class="btn-primary" id="start-btn" onclick="startTranscription()">
+      <!-- Waveform icon -->
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12h3l3-9 4 18 3-9h7"/>
+      </svg>
+      Start Transcription
+    </button>
+  </div><!-- /input-card -->
+
+  <!-- ── Progress card ──────────────────────────────────────────────── -->
+  <div class="card hidden" id="progress-card">
+
+    <div class="prog-bar-track">
+      <div class="prog-bar" id="prog-bar"></div>
+    </div>
+
+    <div class="steps">
+      <!-- Step 1 -->
+      <div class="step" id="step-1">
+        <div class="step-icon-wrap" id="step-1-icon">
+          <!-- Download icon (default) -->
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </div>
+        <div class="step-body">
+          <div class="step-name">Download Audio</div>
+          <div class="step-sub" id="step-1-sub">Waiting…</div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step" id="step-2">
+        <div class="step-icon-wrap" id="step-2-icon">
+          <!-- Waveform icon (default) -->
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12h3l3-9 4 18 3-9h7"/>
+          </svg>
+        </div>
+        <div class="step-body">
+          <div class="step-name">Transcribe</div>
+          <div class="step-sub" id="step-2-sub">Waiting…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log toggle + box -->
+    <div class="log-toggle" id="log-toggle" onclick="toggleLog()">
+      <span id="log-toggle-label">Show raw output</span>
+      <svg class="log-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </div>
+    <div class="log-box hidden" id="log-box"></div>
+
+  </div><!-- /progress-card -->
+
+  <!-- ── Result card ────────────────────────────────────────────────── -->
+  <div class="card hidden" id="result-card">
+    <div class="result-header">
+      <div class="result-icon-wrap" id="result-icon-wrap">
+        <!-- injected by JS -->
+      </div>
+      <div>
+        <div class="result-title" id="result-title">Done</div>
+        <div class="result-sub"   id="result-sub">…</div>
+      </div>
+    </div>
+
+    <ul class="file-list" id="file-list"></ul>
+
+    <button class="btn-primary" id="reset-btn" onclick="resetUI()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+      </svg>
+      Transcribe Another
+    </button>
+  </div><!-- /result-card -->
+
+</div><!-- /container -->
+
+<!-- Copy toast -->
+<div class="copy-toast" id="copy-toast">Path copied to clipboard</div>
+
+<!-- ── JavaScript ──────────────────────────────────────────────────── -->
+<script>
+  /*
+   * When the page is opened directly as a file:// URL the browser can still
+   * reach the Flask server at http://localhost:5000 (CORS is allowed by the
+   * server).  When served by Flask itself all paths are relative.
+   */
+  const API_BASE = location.protocol === 'file:' ? 'http://localhost:5000' : '';
+
+  /* ── Connection check ───────────────────────────────────────────── */
+
+  function showOfflineState(box) {
+    box.innerHTML = `
+      <div class="conn-error-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8"  x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="conn-title">Server offline</div>
+      <div class="conn-sub">
+        The backend isn't running.<br/>
+        Auto-start: <code>python install_service.py</code><br/>
+        Manual: <code>python launch.py</code>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:.6rem 1.5rem;margin-top:.25rem"
+              onclick="checkConnection(true)">
+        Retry
+      </button>`;
+  }
+
+  async function checkConnection(retry = false) {
+    const overlay = document.getElementById('conn-overlay');
+    const box     = document.getElementById('conn-box');
+
+    if (retry) {
+      box.innerHTML = `
+        <div class="conn-spinner"></div>
+        <div class="conn-title">Connecting to server…</div>
+        <div class="conn-sub">Retrying…</div>`;
+    }
+
+    // ── file:// fast-path ─────────────────────────────────────────────
+    // Chrome blocks cross-origin fetches from null (file://) origins even
+    // with CORS headers, and Werkzeug returns 403 for those preflight checks.
+    // Solution: use mode:'no-cors' (opaque probe — we only need reachability),
+    // then immediately redirect to the Flask-served URL where everything works
+    // natively without any cross-origin friction.
+    if (location.protocol === 'file:') {
+      try {
+        await fetch('http://127.0.0.1:5000/health', {
+          cache: 'no-store',
+          mode:  'no-cors',   // bypasses CORS; resolves if server is up, rejects if not
+        });
+        // Server is up — hand off to Flask-served page (no more CORS issues)
+        window.location.replace('http://localhost:5000');
+      } catch (_) {
+        showOfflineState(box);
+      }
+      return;
+    }
+
+    // ── normal path (served by Flask at http://localhost:5000) ────────
+    try {
+      const res = await fetch('/health', { cache: 'no-store' });
+      if (res.ok) { overlay.classList.add('fade-out'); return; }
+    } catch (_) {}
+
+    showOfflineState(box);
+  }
+
+  // Run immediately on page load
+  checkConnection();
+
+  /* ── Model metadata ─────────────────────────────────────────────── */
+  const MODEL_META = {
+    'tiny':    { label: 'Fastest',   cls: 'badge-fastest'  },
+    'base':    { label: 'Fast',      cls: 'badge-fast'     },
+    'small':   { label: 'Balanced',  cls: 'badge-balanced' },
+    'medium':  { label: 'Accurate',  cls: 'badge-accurate' },
+    'large-v3':{ label: 'Best',      cls: 'badge-best'     },
+  };
+
+  const modelSelect = document.getElementById('model-select');
+  const modelBadge  = document.getElementById('model-badge');
+
+  function updateBadge() {
+    const m = MODEL_META[modelSelect.value] || { label: modelSelect.value, cls: 'badge-balanced' };
+    modelBadge.textContent = m.label;
+    modelBadge.className   = `model-badge ${m.cls}`;
+  }
+  modelSelect.addEventListener('change', updateBadge);
+  updateBadge();
+
+  /* ── Custom language ────────────────────────────────────────────── */
+  const langSelect     = document.getElementById('lang-select');
+  const langCustomWrap = document.getElementById('lang-custom-wrap');
+  const langCustom     = document.getElementById('lang-custom');
+
+  langSelect.addEventListener('change', () => {
+    const isOther = langSelect.value === 'other';
+    langCustomWrap.classList.toggle('visible', isOther);
+    if (isOther) langCustom.focus();
+  });
+
+  function getLanguage() {
+    if (langSelect.value === 'other') {
+      return langCustom.value.trim() || 'en';
+    }
+    return langSelect.value;
+  }
+
+  /* ── Log area ───────────────────────────────────────────────────── */
+  let logOpen = false;
+
+  function toggleLog() {
+    logOpen = !logOpen;
+    document.getElementById('log-box').classList.toggle('hidden', !logOpen);
+    document.getElementById('log-toggle').classList.toggle('open',  logOpen);
+    document.getElementById('log-toggle-label').textContent =
+      logOpen ? 'Hide raw output' : 'Show raw output';
+  }
+
+  function appendLog(text) {
+    const box  = document.getElementById('log-box');
+    const line = document.createElement('div');
+    const t    = text.trim();
+    if      (t.startsWith('$'))                                          line.className = 'l-cmd';
+    else if (t.startsWith('✔') || t.includes('100%') || t.includes('[download]')) line.className = 'l-ok';
+    else if (/error|failed|not found/i.test(t))                          line.className = 'l-err';
+    else if (/warning|warn/i.test(t))                                    line.className = 'l-warn';
+    line.textContent = text;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  /* ── Step helpers ───────────────────────────────────────────────── */
+  const CHECK_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>`;
+
+  const SPIN_HTML = `<div class="spinner"></div>`;
+
+  function activateStep(n, sub) {
+    const el = document.getElementById(`step-${n}`);
+    el.classList.add('active');
+    document.getElementById(`step-${n}-sub`).textContent  = sub || 'In progress…';
+    document.getElementById(`step-${n}-icon`).innerHTML   = SPIN_HTML;
+
+    // Mark the previous step done
+    if (n > 1) completeStep(n - 1);
+  }
+
+  function completeStep(n) {
+    const el = document.getElementById(`step-${n}`);
+    el.classList.remove('active');
+    el.classList.add('done');
+    document.getElementById(`step-${n}-icon`).innerHTML  = CHECK_SVG;
+    document.getElementById(`step-${n}-sub`).textContent = 'Complete';
+  }
+
+  function resetStepIcons() {
+    document.getElementById('step-1-icon').innerHTML =
+      `<svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+       </svg>`;
+    document.getElementById('step-2-icon').innerHTML =
+      `<svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12h3l3-9 4 18 3-9h7"/>
+       </svg>`;
+  }
+
+  /* ── SSE / main flow ────────────────────────────────────────────── */
+  let evtSrc = null;
+
+  async function startTranscription() {
+    const urlEl  = document.getElementById('url-input');
+    const url    = urlEl.value.trim();
+
+    if (!url) {
+      urlEl.style.borderColor = 'var(--error)';
+      urlEl.focus();
+      setTimeout(() => { urlEl.style.borderColor = ''; }, 2200);
+      return;
+    }
+
+    const language     = getLanguage();
+    const model        = document.getElementById('model-select').value;
+    const format       = document.querySelector('input[name="format"]:checked').value;
+    const outputFolder = document.getElementById('folder-input').value.trim() || '~/transcripts';
+
+    // Reset UI state
+    document.getElementById('start-btn').disabled = true;
+    document.getElementById('result-card').classList.add('hidden');
+
+    const progCard = document.getElementById('progress-card');
+    progCard.classList.remove('hidden');
+
+    // Reset progress bar
+    const bar = document.getElementById('prog-bar');
+    bar.className      = 'prog-bar';
+    bar.style.cssText  = '';
+
+    // Reset steps
+    ['step-1', 'step-2'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('active', 'done');
+    });
+    resetStepIcons();
+    document.getElementById('step-1-sub').textContent = 'Waiting…';
+    document.getElementById('step-2-sub').textContent = 'Waiting…';
+    document.getElementById('log-box').innerHTML = '';
+
+    // POST to backend
+    let jobId;
+    try {
+      const res = await fetch(`${API_BASE}/transcribe`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ url, language, model, format, output_folder: outputFolder }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showError(err.error || `Server error ${res.status}`);
+        return;
+      }
+      ({ job_id: jobId } = await res.json());
+    } catch (e) {
+      showError('Could not reach the server: ' + e.message);
+      return;
+    }
+
+    openSSE(jobId);
+  }
+
+  function openSSE(jobId) {
+    if (evtSrc) evtSrc.close();
+    evtSrc = new EventSource(`${API_BASE}/stream/${jobId}`);
+
+    evtSrc.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      // Mirror every non-heartbeat event to the browser console for debugging
+      if (msg.type !== 'heartbeat') {
+        console.log(`[Transcribe:${msg.type}]`, msg.data);
+      }
+      handleMsg(msg, jobId);
+    };
+
+    evtSrc.onerror = () => {
+      evtSrc.close();
+      // Fallback: poll status once
+      fetch(`${API_BASE}/status/${jobId}`)
+        .then(r => r.json())
+        .then(d => {
+          if      (d.status === 'done')  showSuccess(d.output_files);
+          else if (d.status === 'error') {
+            console.error('[Transcribe] Status poll error:', d.error);
+            showError(d.error || 'Unknown error');
+          }
+        })
+        .catch(e => { console.error('[Transcribe] Status poll failed:', e); showError('Lost connection to server.'); });
+    };
+  }
+
+  function handleMsg(msg, jobId) {
+    switch (msg.type) {
+      case 'step':
+        activateStep(msg.data.step, msg.data.message);
+        // Rough progress indicator
+        document.getElementById('prog-bar').style.width =
+          msg.data.step === 1 ? '35%' : '70%';
+        break;
+
+      case 'log':
+        appendLog(msg.data);
+        break;
+
+      case 'done':
+        completeStep(2);
+        const bar = document.getElementById('prog-bar');
+        bar.style.width     = '100%';
+        bar.style.animation = 'none';
+        bar.style.background = 'var(--success)';
+        setTimeout(() => showSuccess(msg.data.files), 450);
+        evtSrc.close();
+        break;
+
+      case 'error': {
+        const ebar = document.getElementById('prog-bar');
+        ebar.style.animation = 'none';
+        ebar.style.background = 'var(--error)';
+        ebar.style.width      = '100%';
+        // Normalise: backend sends either a plain string or {message, log_tail}
+        const errMsg  = typeof msg.data === 'string' ? msg.data : msg.data.message;
+        const logTail = typeof msg.data === 'object'  ? (msg.data.log_tail || []) : [];
+        console.error('[Transcribe] Transcription failed:', errMsg);
+        if (logTail.length) console.error('[Transcribe] Log tail:\n' + logTail.join('\n'));
+        // Auto-open the log so the user can see full output
+        if (!logOpen) toggleLog();
+        showError(errMsg, logTail);
+        evtSrc.close();
+        break;
+      }
+
+      case 'end':
+      case 'heartbeat':
+        break;
+    }
+  }
+
+  /* ── Result states ──────────────────────────────────────────────── */
+  function showSuccess(files) {
+    const wrap = document.getElementById('result-icon-wrap');
+    wrap.className = 'result-icon-wrap success';
+    wrap.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>`;
+
+    document.getElementById('result-title').textContent = 'Transcription complete';
+    document.getElementById('result-sub').textContent   =
+      `${files.length} file${files.length !== 1 ? 's' : ''} saved successfully.`;
+
+    const list = document.getElementById('file-list');
+    list.innerHTML = '';
+
+    if (files.length === 0) {
+      list.innerHTML = `<li style="color:var(--text-muted);font-size:.875rem">
+        No output files detected — check your output folder.
+      </li>`;
+    } else {
+      files.forEach(path => {
+        const li = document.createElement('li');
+        li.className = 'file-item';
+        li.title     = 'Click to copy path';
+        li.innerHTML = `
+          <span class="file-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </span>
+          <span class="file-path">${path}</span>
+          <span class="file-copy-hint">copy</span>`;
+        li.addEventListener('click', () => copyPath(path));
+        list.appendChild(li);
+      });
+    }
+
+    const btn = document.getElementById('reset-btn');
+    btn.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+      </svg>
+      Transcribe Another`;
+
+    document.getElementById('result-card').classList.remove('hidden');
+    document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('start-btn').disabled = false;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderLogLine(text) {
+    const t = text.trim();
+    let cls = '';
+    if (/error|failed|traceback|exception/i.test(t)) cls = 'el-err';
+    else if (/warning|warn/i.test(t))                 cls = 'el-warn';
+    else if (t.startsWith('$'))                       cls = 'el-cmd';
+    return `<div class="${cls}">${escHtml(text)}</div>`;
+  }
+
+  function showError(msg, logTail = []) {
+    console.error('[Transcribe] showError:', msg);
+
+    const wrap = document.getElementById('result-icon-wrap');
+    wrap.className = 'result-icon-wrap error';
+    wrap.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8"  x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>`;
+
+    document.getElementById('result-title').textContent = 'Transcription failed';
+    document.getElementById('result-sub').textContent   = msg || 'An unexpected error occurred.';
+
+    // Render inline log tail (last relevant lines) so the cause is visible
+    // without the user having to open the raw log manually
+    const fileList = document.getElementById('file-list');
+    fileList.innerHTML = '';
+    if (logTail.length > 0) {
+      const wrap = document.createElement('li');
+      wrap.style.cssText = 'list-style:none;padding:0;margin:0;width:100%';
+      wrap.innerHTML = `
+        <div class="error-log-wrap">
+          <div class="error-log-header">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Last log output
+          </div>
+          <div class="error-log-lines" id="error-log-lines">
+            ${logTail.map(renderLogLine).join('')}
+          </div>
+        </div>`;
+      fileList.appendChild(wrap);
+      // Scroll to the bottom so the last (most relevant) lines are visible
+      requestAnimationFrame(() => {
+        const el = document.getElementById('error-log-lines');
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    }
+
+    const btn = document.getElementById('reset-btn');
+    btn.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+      </svg>
+      Try Again`;
+
+    document.getElementById('result-card').classList.remove('hidden');
+    document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('start-btn').disabled = false;
+  }
+
+  /* ── Reset / retry ──────────────────────────────────────────────── */
+  function resetUI() {
+    if (evtSrc) { evtSrc.close(); evtSrc = null; }
+    document.getElementById('progress-card').classList.add('hidden');
+    document.getElementById('result-card').classList.add('hidden');
+    document.getElementById('url-input').value = '';
+    document.getElementById('url-input').focus();
+  }
+
+  /* ── Copy path to clipboard ─────────────────────────────────────── */
+  let toastTimer = null;
+  function copyPath(path) {
+    navigator.clipboard.writeText(path).then(() => {
+      const toast = document.getElementById('copy-toast');
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+    });
+  }
+
+  /* ── Enter key submits ──────────────────────────────────────────── */
+  document.getElementById('url-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') startTranscription();
+  });
+</script>
+</body>
+</html>
