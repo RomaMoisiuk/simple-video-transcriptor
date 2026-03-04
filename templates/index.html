@@ -687,6 +687,62 @@
       max-height: 4rem;
       opacity: 1;
     }
+
+    /* ── Transcript display area ─────────────────────────────────────── */
+    .transcript-area {
+      background: var(--log-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.875rem 1rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      line-height: 1.75;
+      color: var(--text);
+      max-height: 420px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 0.75rem;
+      user-select: text;
+    }
+
+    /* ── Action buttons (copy / save) ───────────────────────────────── */
+    .transcript-actions {
+      display: flex;
+      gap: 0.625rem;
+      margin-bottom: 1rem;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: all var(--transition);
+    }
+
+    .btn-action:hover {
+      border-color: var(--accent);
+      color: var(--accent-light);
+      background: var(--accent-bg);
+    }
+
+    .btn-action.flashed {
+      border-color: var(--success-border);
+      color: var(--success);
+      background: var(--success-bg);
+      transition: none;
+    }
   </style>
 </head>
 <body>
@@ -821,12 +877,50 @@
       </div>
     </div>
 
-    <!-- Output folder -->
+    <!-- Output destination -->
     <div class="form-group">
+      <label class="field-label">Output</label>
+      <div class="toggle-group">
+        <input type="radio" name="destination" id="dest-folder" value="folder" checked />
+        <label class="toggle-label" for="dest-folder">
+          <!-- Folder icon -->
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          Save to Folder
+        </label>
+
+        <input type="radio" name="destination" id="dest-file" value="file" />
+        <label class="toggle-label" for="dest-file">
+          <!-- Download icon -->
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Save as File
+        </label>
+
+        <input type="radio" name="destination" id="dest-page" value="page" />
+        <label class="toggle-label" for="dest-page">
+          <!-- Monitor icon -->
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <polyline points="8 21 12 17 16 21"/>
+          </svg>
+          Show on Page
+        </label>
+      </div>
+    </div>
+
+    <!-- Output folder (only visible for "Save to Folder") -->
+    <div class="form-group" id="dest-folder-wrap">
       <label class="field-label" for="folder-input">Output Folder</label>
       <div class="input-wrap has-icon">
         <span class="input-icon">
-          <!-- Folder icon -->
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -913,6 +1007,45 @@
     </div>
 
     <ul class="file-list" id="file-list"></ul>
+
+    <!-- Transcript text (destination === "page") -->
+    <div id="transcript-wrap" class="hidden">
+      <pre id="transcript-text" class="transcript-area"></pre>
+      <div class="transcript-actions">
+        <button class="btn-action" id="copy-transcript-btn" onclick="copyTranscript()">
+          <!-- Copy icon -->
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          Copy
+        </button>
+        <button class="btn-action" id="save-transcript-btn" onclick="saveWithPicker()">
+          <!-- Save icon -->
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Save as File
+        </button>
+      </div>
+    </div>
+
+    <!-- Save as file button (destination === "file") -->
+    <div id="save-file-wrap" class="hidden">
+      <button class="btn-primary" id="save-file-btn" style="margin-bottom:1rem" onclick="saveWithPicker()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Save as File
+      </button>
+    </div>
 
     <button class="btn-primary" id="reset-btn" onclick="resetUI()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
@@ -1025,6 +1158,15 @@
   modelSelect.addEventListener('change', updateBadge);
   updateBadge();
 
+  /* ── Destination toggle ─────────────────────────────────────────── */
+  document.querySelectorAll('input[name="destination"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.getElementById('dest-folder-wrap').classList.toggle(
+        'hidden', radio.value !== 'folder'
+      );
+    });
+  });
+
   /* ── Custom language ────────────────────────────────────────────── */
   const langSelect     = document.getElementById('lang-select');
   const langCustomWrap = document.getElementById('lang-custom-wrap');
@@ -1125,6 +1267,7 @@
     const language     = getLanguage();
     const model        = document.getElementById('model-select').value;
     const format       = document.querySelector('input[name="format"]:checked').value;
+    const destination  = document.querySelector('input[name="destination"]:checked').value;
     const outputFolder = document.getElementById('folder-input').value.trim() || '~/transcripts';
 
     // Reset UI state
@@ -1155,7 +1298,7 @@
       const res = await fetch(`${API_BASE}/transcribe`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ url, language, model, format, output_folder: outputFolder }),
+        body:    JSON.stringify({ url, language, model, format, destination, output_folder: outputFolder }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -1190,7 +1333,7 @@
       fetch(`${API_BASE}/status/${jobId}`)
         .then(r => r.json())
         .then(d => {
-          if      (d.status === 'done')  showSuccess(d.output_files);
+          if      (d.status === 'done')  showSuccess({ files: d.output_files || [], destination: 'folder' });
           else if (d.status === 'error') {
             console.error('[Transcribe] Status poll error:', d.error);
             showError(d.error || 'Unknown error');
@@ -1219,7 +1362,7 @@
         bar.style.width     = '100%';
         bar.style.animation = 'none';
         bar.style.background = 'var(--success)';
-        setTimeout(() => showSuccess(msg.data.files), 450);
+        setTimeout(() => showSuccess(msg.data), 450);
         evtSrc.close();
         break;
 
@@ -1246,43 +1389,83 @@
     }
   }
 
+  /* ── Stored transcript for save / copy ──────────────────────────── */
+  let currentTranscript = null;   // { content: string, filename: string }
+
   /* ── Result states ──────────────────────────────────────────────── */
-  function showSuccess(files) {
-    const wrap = document.getElementById('result-icon-wrap');
-    wrap.className = 'result-icon-wrap success';
-    wrap.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+  function showSuccess(data) {
+    const files       = data.files       || [];
+    const content     = data.content     || null;
+    const filename    = data.filename    || 'transcript.txt';
+    const destination = data.destination || 'folder';
+
+    if (content) currentTranscript = { content, filename };
+
+    const iconWrap = document.getElementById('result-icon-wrap');
+    iconWrap.className = 'result-icon-wrap success';
+    iconWrap.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
       stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="20 6 9 17 4 12"/>
     </svg>`;
 
     document.getElementById('result-title').textContent = 'Transcription complete';
-    document.getElementById('result-sub').textContent   =
-      `${files.length} file${files.length !== 1 ? 's' : ''} saved successfully.`;
 
-    const list = document.getElementById('file-list');
-    list.innerHTML = '';
+    // Reset all output sections
+    const fileList       = document.getElementById('file-list');
+    const transcriptWrap = document.getElementById('transcript-wrap');
+    const saveFileWrap   = document.getElementById('save-file-wrap');
+    fileList.innerHTML   = '';
+    fileList.classList.add('hidden');
+    transcriptWrap.classList.add('hidden');
+    saveFileWrap.classList.add('hidden');
 
-    if (files.length === 0) {
-      list.innerHTML = `<li style="color:var(--text-muted);font-size:.875rem">
-        No output files detected — check your output folder.
-      </li>`;
-    } else {
-      files.forEach(path => {
-        const li = document.createElement('li');
-        li.className = 'file-item';
-        li.title     = 'Click to copy path';
-        li.innerHTML = `
-          <span class="file-icon">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </span>
-          <span class="file-path">${path}</span>
-          <span class="file-copy-hint">copy</span>`;
-        li.addEventListener('click', () => copyPath(path));
-        list.appendChild(li);
-      });
+    if (destination === 'folder') {
+      // ── Saved to disk: show file paths ─────────────────────────────
+      fileList.classList.remove('hidden');
+      document.getElementById('result-sub').textContent =
+        `${files.length} file${files.length !== 1 ? 's' : ''} saved successfully.`;
+
+      if (files.length === 0) {
+        fileList.innerHTML = `<li style="color:var(--text-muted);font-size:.875rem">
+          No output files detected — check your output folder.
+        </li>`;
+      } else {
+        files.forEach(path => {
+          const li = document.createElement('li');
+          li.className = 'file-item';
+          li.title     = 'Click to copy path';
+          li.innerHTML = `
+            <span class="file-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </span>
+            <span class="file-path">${path}</span>
+            <span class="file-copy-hint">copy</span>`;
+          li.addEventListener('click', () => copyPath(path));
+          fileList.appendChild(li);
+        });
+      }
+
+    } else if (destination === 'page') {
+      // ── Show inline ─────────────────────────────────────────────────
+      transcriptWrap.classList.remove('hidden');
+      if (content) {
+        const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+        document.getElementById('result-sub').textContent =
+          `${wordCount.toLocaleString()} word${wordCount !== 1 ? 's' : ''} transcribed.`;
+        document.getElementById('transcript-text').textContent = content;
+      } else {
+        document.getElementById('result-sub').textContent = 'Transcript ready.';
+        document.getElementById('transcript-text').textContent = '(no content returned)';
+      }
+
+    } else if (destination === 'file') {
+      // ── Browser save dialog ─────────────────────────────────────────
+      saveFileWrap.classList.remove('hidden');
+      document.getElementById('result-sub').textContent =
+        `Your transcript is ready — click below to choose where to save it.`;
     }
 
     const btn = document.getElementById('reset-btn');
@@ -1297,6 +1480,88 @@
     document.getElementById('result-card').classList.remove('hidden');
     document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     document.getElementById('start-btn').disabled = false;
+  }
+
+  /* ── Save with native file picker ───────────────────────────────── */
+  async function saveWithPicker() {
+    if (!currentTranscript) return;
+    const { content, filename } = currentTranscript;
+    const ext    = filename.split('.').pop().toLowerCase();
+    const accept = ext === 'srt' ? { 'text/plain': ['.srt'] } : { 'text/plain': ['.txt'] };
+
+    if (!('showSaveFilePicker' in window)) {
+      // Browser doesn't support File System Access API (Firefox, Safari)
+      // — fall back to <a download> which saves to the Downloads folder
+      downloadFallback(content, filename);
+      showToast('Saved to Downloads — your browser does not support a save dialog');
+      return;
+    }
+
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'Text file', accept }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+      showToast('File saved!');
+      flashBtn('save-transcript-btn', '✓ Saved');
+      flashBtn('save-file-btn',       '✓ Saved');
+    } catch (e) {
+      if (e.name === 'AbortError') return;   // user pressed Cancel — do nothing
+      // Any other error: surface it instead of silently downloading elsewhere
+      console.error('[Transcribe] showSaveFilePicker error:', e);
+      showToast('Save failed: ' + e.message);
+    }
+  }
+
+  function downloadFallback(content, filename) {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ── Copy transcript to clipboard ───────────────────────────────── */
+  function copyTranscript() {
+    if (!currentTranscript) return;
+    navigator.clipboard.writeText(currentTranscript.content)
+      .then(() => {
+        showToast('Copied to clipboard!');
+        flashBtn('copy-transcript-btn', '✓ Copied');
+      })
+      .catch(() => {
+        // Fallback: select the pre text
+        const pre = document.getElementById('transcript-text');
+        const range = document.createRange();
+        range.selectNode(pre);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        showToast('Text selected — press Ctrl+C / ⌘C to copy');
+      });
+  }
+
+  /* ── Flash a button briefly ─────────────────────────────────────── */
+  function flashBtn(id, label, ms = 2000) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const orig = btn.innerHTML;
+    btn.textContent = label;
+    btn.classList.add('flashed');
+    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('flashed'); }, ms);
+  }
+
+  /* ── Toast helper (reuses existing toast element) ───────────────── */
+  function showToast(msg) {
+    const toast = document.getElementById('copy-toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
   }
 
   function escHtml(s) {
@@ -1314,6 +1579,10 @@
 
   function showError(msg, logTail = []) {
     console.error('[Transcribe] showError:', msg);
+
+    // Hide output sections that only apply to success
+    document.getElementById('transcript-wrap').classList.add('hidden');
+    document.getElementById('save-file-wrap').classList.add('hidden');
 
     const wrap = document.getElementById('result-icon-wrap');
     wrap.className = 'result-icon-wrap error';
@@ -1373,6 +1642,7 @@
   /* ── Reset / retry ──────────────────────────────────────────────── */
   function resetUI() {
     if (evtSrc) { evtSrc.close(); evtSrc = null; }
+    currentTranscript = null;
     document.getElementById('progress-card').classList.add('hidden');
     document.getElementById('result-card').classList.add('hidden');
     document.getElementById('url-input').value = '';
@@ -1382,12 +1652,7 @@
   /* ── Copy path to clipboard ─────────────────────────────────────── */
   let toastTimer = null;
   function copyPath(path) {
-    navigator.clipboard.writeText(path).then(() => {
-      const toast = document.getElementById('copy-toast');
-      toast.classList.add('show');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
-    });
+    navigator.clipboard.writeText(path).then(() => showToast('Path copied to clipboard'));
   }
 
   /* ── Enter key submits ──────────────────────────────────────────── */

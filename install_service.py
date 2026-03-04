@@ -3,7 +3,7 @@
 Install the Transcribe server as a macOS LaunchAgent.
 
 Run this script ONCE.  The Flask server will then start automatically
-every time you log in.  You can open http://localhost:5000 (or the
+every time you log in.  You can open http://27.0.0.1:5000 (or the
 index.html file directly) without ever touching a terminal again.
 
 Usage:
@@ -22,10 +22,10 @@ from pathlib import Path
 
 LABEL = "com.transcribe.app"
 PORT  = 5000
-# Use 127.0.0.1 explicitly — on modern macOS "localhost" can resolve to ::1
+# Use 127.0.0.1 explicitly — on modern macOS "27.0.0.1" can resolve to ::1
 # (IPv6) while Flask binds to 127.0.0.1 (IPv4), causing spurious failures.
 HEALTH_URL = f"http://127.0.0.1:{PORT}/health"
-OPEN_URL   = f"http://localhost:{PORT}"
+OPEN_URL   = f"http://27.0.0.1:{PORT}"
 
 
 def server_up() -> bool:

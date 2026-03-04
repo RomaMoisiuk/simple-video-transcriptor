@@ -17,7 +17,8 @@ jobs: dict = {}
 # ── Background worker ──────────────────────────────────────────────────────────
 
 def run_transcription(job_id: str, url: str, language: str,
-                      model: str, output_format: str, output_folder: str) -> None:
+                      model: str, output_format: str, output_folder: str,
+                      destination: str = "folder") -> None:
     job = jobs[job_id]
     job["status"] = "running"
     q: queue.Queue = job["queue"]
@@ -107,8 +108,13 @@ def run_transcription(job_id: str, url: str, language: str,
             job["step"] = 2
             emit("step", {"step": 2, "message": "Transcribing with Whisper…"})
 
-            out_dir = Path(output_folder).expanduser().resolve()
-            out_dir.mkdir(parents=True, exist_ok=True)
+            if destination == "folder":
+                out_dir = Path(output_folder).expanduser().resolve()
+                out_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                # Temp output dir — we'll read the content and auto-clean it
+                out_dir = Path(tmpdir) / "transcripts"
+                out_dir.mkdir()
 
             fmt_map = {"text": "txt", "subtitles": "srt", "both": "all"}
             whisper_fmt = fmt_map.get(output_format, "txt")
@@ -165,9 +171,26 @@ def run_transcription(job_id: str, url: str, language: str,
                     if f.suffix in {".txt", ".srt", ".vtt", ".tsv", ".json"}
                 ]
 
+            # Read content for "file" or "page" destinations
+            content = None
+            suggested_name = None
+            if destination in ("file", "page"):
+                # Prefer .txt, then .srt, then .vtt
+                for ext in ("txt", "srt", "vtt"):
+                    candidate = out_dir / f"{stem}.{ext}"
+                    if candidate.exists():
+                        content = candidate.read_text(encoding="utf-8")
+                        suggested_name = candidate.name
+                        break
+
             job["status"] = "done"
-            job["output_files"] = output_files
-            emit("done", {"files": output_files})
+            job["output_files"] = output_files if destination == "folder" else []
+            emit("done", {
+                "files":       output_files if destination == "folder" else [],
+                "content":     content,
+                "filename":    suggested_name,
+                "destination": destination,
+            })
 
     except FileNotFoundError as exc:
         tool = "yt-dlp" if "yt-dlp" in str(exc) else "whisper"
@@ -228,6 +251,7 @@ def transcribe():
             data.get("model",         "base"),
             data.get("format",        "text"),
             data.get("output_folder", "~/transcripts"),
+            data.get("destination",   "folder"),
         ),
         daemon=True,
     ).start()

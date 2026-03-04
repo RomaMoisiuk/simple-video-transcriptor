@@ -75,9 +75,41 @@ Checks if the server is already running, starts it in the background if not, and
 python app.py
 ```
 
+## Restarting the server
+
+After code changes you need to restart the server. The command depends on how you started it.
+
+### Option A — LaunchAgent
+
+```bash
+launchctl unload  ~/Library/LaunchAgents/com.transcribe.app.plist
+launchctl load    ~/Library/LaunchAgents/com.transcribe.app.plist
+```
+
+Or re-run the installer, which unloads and reloads in one step:
+
+```bash
+python install_service.py
+```
+
+### Option B — launch.py (background process)
+
+```bash
+pkill -f app.py   # stop the running server
+python launch.py  # start fresh + open browser
+```
+
+### Option C — Manual (terminal)
+
+Press `Ctrl+C` in the terminal where `app.py` is running, then:
+
+```bash
+python app.py
+```
+
 ## Features
 
-- Paste a YouTube URL, pick a language and Whisper model, choose an output format (plain text, SRT subtitles, or both), and hit **Start Transcription**.
+- Paste a YouTube URL (some other video services are avavilable as well - check list on yt-dlp), pick a language and Whisper model, choose an output format (plain text, SRT subtitles, or both), and hit **Start Transcription**.
 - Language dropdown includes a custom "Other (type it…)" option for any language Whisper supports.
 - Real-time progress streamed via Server-Sent Events — no page reloads.
 - Collapsible raw log for full yt-dlp / Whisper output, with inline error details when something goes wrong.
