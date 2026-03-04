@@ -25,7 +25,7 @@ PORT  = 5000
 # Use 127.0.0.1 explicitly — on modern macOS "27.0.0.1" can resolve to ::1
 # (IPv6) while Flask binds to 127.0.0.1 (IPv4), causing spurious failures.
 HEALTH_URL = f"http://127.0.0.1:{PORT}/health"
-OPEN_URL   = f"http://27.0.0.1:{PORT}"
+OPEN_URL   = f"http://127.0.0.1:{PORT}"
 
 
 def server_up() -> bool:
