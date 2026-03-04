@@ -13,8 +13,16 @@
 # Safe to re-run — already-installed tools are skipped.
 #
 # Usage:
-#   chmod +x setup.sh
-#   ./setup.sh
+#   ./setup.sh          (recommended — respects the bash shebang)
+#   bash setup.sh       (also fine)
+
+# ── Guard: re-exec with bash if launched via plain `sh` ──────────────────────
+# `sh setup.sh` on macOS uses /bin/sh (dash/POSIX) which ignores the shebang
+# above and doesn't support bash features or `echo -e`.  Re-launching with
+# bash fixes both issues transparently.
+if [ -z "${BASH_VERSION:-}" ]; then
+    exec bash "$0" "$@"
+fi
 
 set -euo pipefail
 
@@ -101,7 +109,7 @@ if ! command -v brew &>/dev/null; then
     echo -e "  Install it with:"
     echo -e "    ${CYAN}/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"${NC}"
     echo ""
-    die "Homebrew is required (needed to install ffmpeg)."
+    die "Homebrew is required (needed to install ffmpeg and yt-dlp)."
 fi
 
 ok "Homebrew $(brew --version | head -1 | awk '{print $2}')"
@@ -118,12 +126,16 @@ else
 fi
 
 # ── 6. yt-dlp ────────────────────────────────────────────────────────────────
+# Install via Homebrew (NOT pip) so the `yt-dlp` binary lands in
+# /opt/homebrew/bin or /usr/local/bin — always on PATH.
+# pip install puts it in ~/Library/Python/X.Y/bin/ which is NOT on PATH by
+# default when using the macOS system Python (/usr/bin/python3).
 step "yt-dlp"
 if command -v yt-dlp &>/dev/null; then
     ok "already installed  (v$(yt-dlp --version))"
 else
-    info "Installing yt-dlp…"
-    run_pip install --quiet yt-dlp
+    info "Installing yt-dlp via Homebrew…"
+    brew install yt-dlp
     ok "yt-dlp installed"
 fi
 
@@ -138,7 +150,7 @@ else
     ok "openai-whisper installed"
 fi
 
-# ── 8. Fix numba / coverage incompatibility ───────────────────────────────────
+# ── 8. Fix numba / coverage incompatibility ──────────────────────────────────
 step "numba / coverage compatibility"
 # numba 0.64+ references coverage.types.Tracer which was never added in
 # coverage 7.x.  Removing coverage makes numba skip its coverage-support
@@ -202,10 +214,10 @@ check_module() {
     fi
 }
 
-check_cmd   "ffmpeg"        ffmpeg
-check_cmd   "yt-dlp"        yt-dlp
-check_module "whisper"      whisper
-check_module "flask"        flask
+check_cmd    "ffmpeg"   ffmpeg
+check_cmd    "yt-dlp"   yt-dlp
+check_module "whisper"  whisper
+check_module "flask"    flask
 
 if [[ "$FAILED" -ne 0 ]]; then
     echo ""
