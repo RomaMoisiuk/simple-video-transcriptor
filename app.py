@@ -18,7 +18,8 @@ jobs: dict = {}
 
 def run_transcription(job_id: str, url: str, language: str,
                       model: str, output_format: str, output_folder: str,
-                      destination: str = "folder") -> None:
+                      destination: str = "folder",
+                      browser: str = "chrome") -> None:
     job = jobs[job_id]
     job["status"] = "running"
     q: queue.Queue = job["queue"]
@@ -55,8 +56,12 @@ def run_transcription(job_id: str, url: str, language: str,
                 "--audio-quality", "0",
                 "--no-playlist",
                 "--output", os.path.join(tmpdir, "%(title)s.%(ext)s"),
-                url,
             ]
+            # Pass browser cookies so YouTube doesn't block with bot detection.
+            # "none" means the user explicitly opted out.
+            if browser and browser != "none":
+                dl_cmd += ["--cookies-from-browser", browser]
+            dl_cmd.append(url)
             emit("log", "$ " + " ".join(dl_cmd))
 
             proc = subprocess.Popen(
@@ -82,6 +87,13 @@ def run_transcription(job_id: str, url: str, language: str,
                 if "ffprobe and ffmpeg not found" in tail or "ffmpeg not found" in tail.lower():
                     raise RuntimeError(
                         "ffmpeg not found — install it with:  brew install ffmpeg"
+                    )
+                if "sign in to confirm" in tail.lower() or "not a bot" in tail.lower():
+                    raise RuntimeError(
+                        "YouTube blocked the download (bot detection). "
+                        "Make sure you are logged into YouTube in your selected browser, "
+                        "then try again. If the problem persists, try a different browser "
+                        "in the YouTube Cookies selector."
                     )
                 raise RuntimeError("yt-dlp failed (non-zero exit code)")
 
@@ -252,6 +264,7 @@ def transcribe():
             data.get("format",        "text"),
             data.get("output_folder", "~/transcripts"),
             data.get("destination",   "folder"),
+            data.get("browser",       "safari"),
         ),
         daemon=True,
     ).start()

@@ -688,6 +688,14 @@
       opacity: 1;
     }
 
+    /* ── Field hint (small helper text below a field) ───────────────── */
+    .field-hint {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.72rem;
+      color: #8892a4;
+    }
+
     /* ── Transcript display area ─────────────────────────────────────── */
     .transcript-area {
       background: var(--log-bg);
@@ -928,6 +936,23 @@
         </span>
         <input type="text" id="folder-input" value="~/transcripts" spellcheck="false" />
       </div>
+    </div>
+
+    <!-- YouTube cookies browser -->
+    <div class="form-group">
+      <label class="field-label" for="browser-select">YouTube Cookies</label>
+      <div class="input-wrap select-wrap">
+        <select id="browser-select">
+          <option value="safari" selected>Safari</option>
+          <option value="chrome">Chrome</option>
+          <option value="firefox">Firefox</option>
+          <option value="chromium">Chromium</option>
+          <option value="brave">Brave</option>
+          <option value="edge">Edge</option>
+          <option value="none">None</option>
+        </select>
+      </div>
+      <span class="field-hint">Browser to read YouTube cookies from — prevents bot-detection blocks.</span>
     </div>
 
     <!-- Start button -->
@@ -1269,6 +1294,7 @@
     const format       = document.querySelector('input[name="format"]:checked').value;
     const destination  = document.querySelector('input[name="destination"]:checked').value;
     const outputFolder = document.getElementById('folder-input').value.trim() || '~/transcripts';
+    const browser      = document.getElementById('browser-select').value;
 
     // Reset UI state
     document.getElementById('start-btn').disabled = true;
@@ -1298,7 +1324,7 @@
       const res = await fetch(`${API_BASE}/transcribe`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ url, language, model, format, destination, output_folder: outputFolder }),
+        body:    JSON.stringify({ url, language, model, format, destination, output_folder: outputFolder, browser }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
